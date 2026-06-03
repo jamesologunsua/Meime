@@ -29,7 +29,7 @@ export default function Movies() {
 
       <div className="-mt-32 relative z-20">
         {error.searchResults && (
-          <p className="px-10 mb-4 text-sm text-red-400">Search failed: {error.searchResults}</p>
+          <p className="px-6 sm:px-10 mb-4 text-sm text-red-400">Search failed: {error.searchResults}</p>
         )}
 
         {hasSearchResults && (
@@ -46,7 +46,6 @@ export default function Movies() {
         <MovieRow title="Korean Movies" movies={categories.korean || []} isLoading={loading.korean} />
         <MovieRow title="Anime Movies" movies={categories.anime || []} isLoading={loading.anime} />
         <MovieRow title="Chinese Movies" movies={categories.chinese || []} isLoading={loading.chinese} />
-        <MovieRow title="Discover Movies" movies={categories.trending || []} isLoading={loading.trending} />
       </div>
     </div>
   )

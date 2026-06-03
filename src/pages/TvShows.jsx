@@ -29,7 +29,7 @@ export default function TvShows() {
 
       <div className="-mt-32 relative z-20">
         {error.searchResults && (
-          <p className="px-10 mb-4 text-sm text-red-400">Search failed: {error.searchResults}</p>
+          <p className="px-6 sm:px-10 mb-4 text-sm text-red-400">Search failed: {error.searchResults}</p>
         )}
 
         {hasSearchResults && (

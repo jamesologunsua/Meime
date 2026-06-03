@@ -1,5 +1,4 @@
-import axios from "axios";
-import Movies from "../pages/Movies";
+import axios from "axios"
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
 
@@ -7,163 +6,206 @@ const tmdb = axios.create({
   baseURL: "https://api.themoviedb.org/3",
 })
 
-/* Trending movies + TV shows of the week */
-export const fetchTrending = () => 
-  tmdb.get("/trending/all/week", {
-    params: { api_key: API_KEY },
+const withApiKey = (params = {}) => ({
+  api_key: API_KEY,
+  ...params,
+})
+
+const hasArtwork = (item) => item.poster_path || item.backdrop_path
+
+const tagResults = (results = [], mediaType) =>
+  results
+    .filter((item) => item && hasArtwork(item))
+    .map((item) => ({ ...item, media_type: item.media_type || mediaType }))
+
+const filterMediaResults = (results = []) =>
+  results.filter((item) => ["movie", "tv"].includes(item.media_type) && hasArtwork(item))
+
+const getTaggedResults = async (path, params, mediaType) => {
+  const response = await tmdb.get(path, {
+    params: withApiKey(params),
   })
 
-/* Top rated movie + Tv */
-export const fetchTopRated = async () => {
-  const [movies, tv] = await Promise.all([
-    tmdb.get("/movie/top_rated", { params: {  api_key: API_KEY} }),
-    tmdb.get("/tv/top_rated", { params: {  api_key: API_KEY} }),
-  ])
-
   return {
-    data: {results: [...movies.data.results, ...tv.data.results]}
+    ...response,
+    data: {
+      ...response.data,
+      results: tagResults(response.data.results, mediaType),
+    },
   }
 }
 
-/* Action movies + TV shows (28 for movies, 10759 for TV) */
-export const fetchActionMixed = async () => {
+export const getMediaType = (item) => {
+  if (item?.media_type === "tv" || item?.media_type === "movie") return item.media_type
+  return item?.first_air_date || item?.name ? "tv" : "movie"
+}
+
+export const fetchTrending = async () => {
+  const response = await tmdb.get("/trending/all/week", {
+    params: withApiKey(),
+  })
+
+  return {
+    ...response,
+    data: {
+      ...response.data,
+      results: filterMediaResults(response.data.results),
+    },
+  }
+}
+
+export const fetchTopRated = async () => {
   const [movies, tv] = await Promise.all([
-    tmdb.get("/discover/movie", {
-      params: { api_key: API_KEY, with_genres: 28 } }),
-    tmdb.get("/discover/tv", {
-      params: { api_key: API_KEY, with_genres: 10759 } }),
+    tmdb.get("/movie/top_rated", { params: withApiKey() }),
+    tmdb.get("/tv/top_rated", { params: withApiKey() }),
   ])
 
   return {
     data: {
-      results: [...movies.data.results, ...tv.data.results]
-    }
+      results: [
+        ...tagResults(movies.data.results, "movie"),
+        ...tagResults(tv.data.results, "tv"),
+      ],
+    },
   }
 }
 
-/* Search movie + TV shows */
-export const searchMulti = (query) =>
-  tmdb.get("/search/multi", {
-    params: { api_key: API_KEY, query },
+export const fetchActionMixed = async () => {
+  const [movies, tv] = await Promise.all([
+    tmdb.get("/discover/movie", {
+      params: withApiKey({ with_genres: 28 }),
+    }),
+    tmdb.get("/discover/tv", {
+      params: withApiKey({ with_genres: 10759 }),
+    }),
+  ])
+
+  return {
+    data: {
+      results: [
+        ...tagResults(movies.data.results, "movie"),
+        ...tagResults(tv.data.results, "tv"),
+      ],
+    },
+  }
+}
+
+export const searchMulti = async (query) => {
+  const response = await tmdb.get("/search/multi", {
+    params: withApiKey({ query }),
   })
 
+  return {
+    ...response,
+    data: {
+      ...response.data,
+      results: filterMediaResults(response.data.results),
+    },
+  }
+}
 
-/* Details */
-export const fetchMovieDetails = (movieId) =>
-  tmdb.get(`/movie/${movieId}`, {
-    params: {
-      api_key: API_KEY,
-      append_to_response: "videos,similar"
-    }
+export const fetchDetails = (id, mediaType = "movie") =>
+  tmdb.get(`/${mediaType}/${id}`, {
+    params: withApiKey({ append_to_response: "videos,similar" }),
   })
 
-export const fetchTvDetails = (tvId) =>
-  tmdb.get(`/tv/${tvId}`, {
-    params: {
-      api_key: API_KEY,
-      append_to_response: "videos,similar"
-    }
+export const fetchVideos = (id, mediaType = "movie") =>
+  tmdb.get(`/${mediaType}/${id}/videos`, {
+    params: withApiKey(),
   })
 
-export const fetchMovieVideos = (movieId) =>
-  tmdb.get(`/movie/${movieId}/videos`, {
-    params: { api_key: API_KEY },
+export const fetchSimilar = async (id, mediaType = "movie") => {
+  const response = await tmdb.get(`/${mediaType}/${id}/similar`, {
+    params: withApiKey(),
   })
 
-export const fetchSimilarMovies = (movieId) =>
-  tmdb.get(`/movie/${movieId}/similar`, {
-    params: { api_key: API_KEY },
-  })
+  return {
+    ...response,
+    data: {
+      ...response.data,
+      results: tagResults(response.data.results, mediaType),
+    },
+  }
+}
+
+export const fetchMovieDetails = (movieId) => fetchDetails(movieId, "movie")
+export const fetchTvDetails = (tvId) => fetchDetails(tvId, "tv")
+export const fetchMovieVideos = (movieId) => fetchVideos(movieId, "movie")
+export const fetchSimilarMovies = (movieId) => fetchSimilar(movieId, "movie")
 
 export const fetchKoreanMixed = async () => {
   const [movies, tv] = await Promise.all([
     tmdb.get("/discover/movie", {
-      params: { api_key: API_KEY, with_genres: 28, with_original_language: "ko" } }),
+      params: withApiKey({ with_original_language: "ko" }),
+    }),
     tmdb.get("/discover/tv", {
-      params: { api_key: API_KEY, with_genres: 10759, with_original_language: "ko" } }),
+      params: withApiKey({ with_original_language: "ko" }),
+    }),
   ])
-
-  const moviesWithType = movies.data.results.map(movie => ({ ...movie, media_type: "movie" }))
-  const tvWithType = tv.data.results.map(show => ({ ...show, media_type: "tv" }))
 
   return {
     data: {
-      results: [...moviesWithType, ...tvWithType]
-    }
+      results: [
+        ...tagResults(movies.data.results, "movie"),
+        ...tagResults(tv.data.results, "tv"),
+      ],
+    },
   }
 }
 
-/* export const tvMixed = async () => {
-  const [korean, other] = await Promise.all([
-    tmdb.get("/discover/tv", {
-      params: {api_key: API_KEY, with_genres: 10759, with_original_language: "ko" } }),
-    tmdb.get("/discover/tv", {
-      params: {api_key: API_KEY, with_genres: 10759, with_original_language: "en" } }),
-    ])
-
-  return {
-    data: {
-      results: [...korean.data.results, ...other.data.results]
-    }
-  }
-} */
-
-/* For Tv shows page: */
 export const fetchWesternTv = () =>
-  tmdb.get("/discover/tv", {
-    params: { api_key: API_KEY, with_original_language: "en", sort_by: "popularity.desc" },
-  })
+  getTaggedResults(
+    "/discover/tv",
+    { with_original_language: "en", sort_by: "popularity.desc" },
+    "tv",
+  )
 
-  export const fetchKoreanTv = () =>
-  tmdb.get("/discover/tv", {
-    params: { api_key: API_KEY, with_original_language: "ko", sort_by: "popularity.desc" },
-  })
+export const fetchKoreanTv = () =>
+  getTaggedResults(
+    "/discover/tv",
+    { with_original_language: "ko", sort_by: "popularity.desc" },
+    "tv",
+  )
 
-
-export const fetchAnimeTv = () => 
-  tmdb.get("/discover/tv", {
-    params: { api_key: API_KEY, with_original_language: "ja", with_genres: 16 },
-  })
+export const fetchAnimeTv = () =>
+  getTaggedResults(
+    "/discover/tv",
+    { with_original_language: "ja", with_genres: 16 },
+    "tv",
+  )
 
 export const fetchChineseTv = () =>
-  tmdb.get("/discover/tv", {
-    params: { api_key: API_KEY, with_original_language: "zh" },
-  })
+  getTaggedResults("/discover/tv", { with_original_language: "zh" }, "tv")
 
 export const fetchTrendingTv = () =>
-  tmdb.get("/trending/tv/week", {
-    params: { api_key: API_KEY },
-  })
+  getTaggedResults("/trending/tv/week", undefined, "tv")
 
-
-/* For Movies page */
 export const fetchWesternMovies = () =>
-  tmdb.get("/discover/movie", {
-    params: { api_key: API_KEY, with_original_language: "en", sort_by: "popularity.desc" },
-  })
+  getTaggedResults(
+    "/discover/movie",
+    { with_original_language: "en", sort_by: "popularity.desc" },
+    "movie",
+  )
 
 export const fetchKoreanMovies = () =>
-  tmdb.get("/discover/movie", {
-    params: { api_key: API_KEY, with_original_language: "ko", sort_by: "popularity.desc" },
-  })
+  getTaggedResults(
+    "/discover/movie",
+    { with_original_language: "ko", sort_by: "popularity.desc" },
+    "movie",
+  )
 
 export const fetchAnimeMovies = () =>
-  tmdb.get("/discover/movie", {
-    params: { api_key: API_KEY, with_original_language: "ja", with_genres: 16 },
-  })
+  getTaggedResults(
+    "/discover/movie",
+    { with_original_language: "ja", with_genres: 16 },
+    "movie",
+  )
 
 export const fetchChineseMovies = () =>
-  tmdb.get("/discover/movie", {
-    params: { api_key: API_KEY, with_original_language: "zh" },
-  })
+  getTaggedResults("/discover/movie", { with_original_language: "zh" }, "movie")
 
 export const fetchTrendingMovies = () =>
-  tmdb.get("/trending/movie/week", {
-    params: { api_key: API_KEY, sort_by: "popularity.desc" },
-  })
+  getTaggedResults("/trending/movie/week", { sort_by: "popularity.desc" }, "movie")
 
 export const fetchTopRatedMovies = () =>
-  tmdb.get("/movie/top_rated", {
-    params: { api_key: API_KEY, sort_by: "popularity.desc" },
-  })
-
+  getTaggedResults("/movie/top_rated", { sort_by: "popularity.desc" }, "movie")

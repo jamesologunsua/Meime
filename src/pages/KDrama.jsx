@@ -5,22 +5,21 @@ import Navbar from "../components/Navbar"
 import Hero from "../components/Hero"
 import MovieRow from "../components/MovieRow"
 import { getMoviesByCategory } from "../redux/movieSlice"
-import { fetchTrending, fetchTopRated, fetchActionMixed, fetchKoreanMixed } from "../services/tmdb"
+import { fetchKoreanMixed, fetchKoreanMovies, fetchKoreanTv } from "../services/tmdb"
 
-export default function Home() {
+export default function KDrama() {
   const dispatch = useDispatch()
   const { categories, loading, error } = useSelector((state) => state.movies)
   const hasSearchResults = Object.prototype.hasOwnProperty.call(categories, "searchResults")
 
   useEffect(() => {
-    dispatch(getMoviesByCategory({ category: "trending", fetchFunction: fetchTrending }))
-    dispatch(getMoviesByCategory({ category: "topRated", fetchFunction: fetchTopRated }))
-    dispatch(getMoviesByCategory({ category: "action", fetchFunction: fetchActionMixed }))
-    dispatch(getMoviesByCategory({ category: "koreanMixed", fetchFunction: fetchKoreanMixed }))
+    dispatch(getMoviesByCategory({ category: "trending", fetchFunction: fetchKoreanMixed }))
+    dispatch(getMoviesByCategory({ category: "koreanTv", fetchFunction: fetchKoreanTv }))
+    dispatch(getMoviesByCategory({ category: "koreanMovies", fetchFunction: fetchKoreanMovies }))
   }, [dispatch])
 
   return (
-    <div className="bg-black text-white min-h-screen">
+    <div className="min-h-screen bg-black text-white">
       <Navbar />
       <Hero />
 
@@ -37,10 +36,12 @@ export default function Home() {
           />
         )}
 
-        <MovieRow title="Trending Now" movies={categories.trending || []} isLoading={loading.trending} />
-        <MovieRow title="Top Rated" movies={categories.topRated || []} isLoading={loading.topRated} />
-        <MovieRow title="Action Movies & TV" movies={categories.action || []} isLoading={loading.action} />
-        <MovieRow title="Korean Movies & TV" movies={categories.koreanMixed || []} isLoading={loading.koreanMixed} />
+        <MovieRow title="K-Dramas" movies={categories.koreanTv || []} isLoading={loading.koreanTv} />
+        <MovieRow
+          title="Korean Movies"
+          movies={categories.koreanMovies || []}
+          isLoading={loading.koreanMovies}
+        />
       </div>
     </div>
   )

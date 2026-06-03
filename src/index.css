@@ -18,7 +18,20 @@ body {
   margin: 0;
 }
 
-/* Hide scrollbar */
+html,
+body,
+#root {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar while preserving scroll */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
